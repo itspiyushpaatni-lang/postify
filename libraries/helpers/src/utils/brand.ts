@@ -9,5 +9,5 @@ export const brand = {
   // AGPL-3.0 section 13: users of the hosted app must be able to get the source.
   sourceUrl:
     process.env.NEXT_PUBLIC_SOURCE_URL ||
-    'https://github.com/gitroomhq/postiz-app',
+    'https://github.com/itspiyushpaatni-lang/postify',
 };

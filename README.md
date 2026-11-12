@@ -133,6 +133,22 @@ account has every feature.
 
 ## Deploy
 
+### Quickest: one command, no domain
+
+On a Linux server with Docker, this pulls the image GitHub Actions builds from
+`main`, writes a `.env` with generated secrets, and serves the app on
+`http://<server-ip>:5000` (next free port if 5000 is taken):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/itspiyushpaatni-lang/postify/main/scripts/install.sh | bash
+```
+
+Run it again to update. This mode is plain http, so it is for trying the app out:
+most social networks only accept **https** redirect URLs, so connecting X, LinkedIn,
+Meta and others needs a domain with TLS (next section). Anyone who can reach the
+address can sign up; set `DISABLE_REGISTRATION=true` in `~/postify/.env` after
+creating your account and run `docker compose up -d` to close registration.
+
 ### One server with Docker Compose
 
 Suits a 2 vCPU / 8 GB VPS. The image builds on the server; the build needs about
@@ -145,7 +161,7 @@ cp .env.example .env
 #   FRONTEND_URL=https://app.example.com
 #   NEXT_PUBLIC_BACKEND_URL=https://app.example.com/api
 #   JWT_SECRET, POSTGRES_PASSWORD, plus the keys you use
-docker compose -f docker-compose.lean.yaml up -d --build
+docker compose -f docker-compose.lean.yaml up -d          # add --build to build on the server
 ```
 
 The app listens on `127.0.0.1:5000`; the schema is applied on start. Put TLS in front,
