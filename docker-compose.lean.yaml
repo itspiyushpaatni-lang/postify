@@ -1,0 +1,72 @@
+# Lean single-server deployment: the app (frontend + API + worker behind nginx
+# on port 5000), Postgres, Redis and a single-binary Temporal.
+#
+#   cp .env.example .env   # then fill it in
+#   docker compose -f docker-compose.lean.yaml up -d --build
+#
+# Put a TLS reverse proxy (Caddy, Traefik, nginx) in front of port 5000.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/app
+      REDIS_URL: redis://redis:6379
+      TEMPORAL_ADDRESS: temporal:7233
+      BACKEND_INTERNAL_URL: http://localhost:3000
+      STORAGE_PROVIDER: local
+      UPLOAD_DIRECTORY: /uploads
+      NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: /uploads
+      IS_GENERAL: "true"
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      temporal:
+        condition: service_started
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U app -d app
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  # Temporal's development server: one process, SQLite on a volume. It keeps
+  # scheduled posts across restarts and is fine for a small install; move to
+  # the full Temporal setup in docker-compose.yaml (or Temporal Cloud) when
+  # you have real load.
+  temporal:
+    image: temporalio/temporal:latest
+    restart: unless-stopped
+    command: server start-dev --ip 0.0.0.0 --db-filename /data/temporal.db --headless
+    volumes:
+      - temporaldata:/data
+
+volumes:
+  pgdata:
+  redisdata:
+  temporaldata:
+  uploads:
